@@ -1,0 +1,38 @@
+version: '2.1'  
+volumes:  
+    database:
+    dashboard:
+services:  
+    blues-note:
+      build: ./blues-note
+      devices:
+        - "/dev/i2c-1:/dev/i2c-1"
+      ports:
+        - "8765:8765"
+      privileged: true
+
+    connector:
+      image: balenablocks/connector:raspberrypi3
+      restart: always
+      labels:
+        io.balena.features.balena-api: '1'
+      privileged: true
+      environment: 
+        - 'ENABLE_EXTERNAL_HTTP_LISTENER=1'
+      ports:
+        - "8080"
+
+    influxdb:
+      image: influxdb@sha256:b4529fd53e9022bd1e83aaf04c6c6a1ebfffdfa112c31367d69da1354983a24b
+      container_name: influxdb
+      restart: always
+      volumes:
+        - 'database:/var/lib/influxdb'
+
+    dashboard:
+      image: balenablocks/dashboard:raspberrypi3
+      restart: always
+      ports:
+        - "80"
+      volumes:
+        - 'dashboard:/data'
