@@ -6,6 +6,7 @@ library on a Raspberry Pi device.
 import sys
 import os
 import time
+import random
 
 sys.path.insert(0, os.path.abspath(
                 os.path.join(os.path.dirname(__file__), '..')))
@@ -38,12 +39,15 @@ def NotecardExceptionInfo(exception):
 
 
 def transactionSync(card):
+    req = {"req":"hub.sync"}
+    callTransaction(card, req, "SYNC")
+
+def transactionSyncStatus(card):
     req = {"req":"hub.sync.status"}
     callTransaction(card, req, "SYNC.STATUS")
 
-
 def transactionSend(card):
-    randNumber = uniform(0, 10)
+    randNumber = random.randint(0, 11)
     req = {"req":"note.add","body":{"temp": randNumber}}
     callTransaction(card, req, "SEND")
 
@@ -63,13 +67,12 @@ def transactionGPS(card):
 
 
 def transactionTriangulate(card):
-    req = {"req": "card.triangulate", "mode": "wifi,cell", "on": true, "usb": true, "set": true}
+    req = {"req": "card.triangulate", "mode": "wifi,cell", "on": True, "usb": True, "set": True}
     callTransaction(card, req, "TRIANGULATE")
 
 
 
 def callTransaction(card, req, ope):
-    
     try:
         print(ope)
         print(req)
@@ -77,8 +80,6 @@ def callTransaction(card, req, ope):
         print(rsp)
 
         time.sleep(10)
-
-        transactionSync(card)
 
     except Exception as exception:
         print("Transaction error: " + NotecardExceptionInfo(exception))
@@ -121,6 +122,7 @@ def main():
             time.sleep(15)
             transactionGPS(card)
             time.sleep(15)
-        
+            transactionSyncStatus(card)
+            time.sleep(15)
 
 main()
