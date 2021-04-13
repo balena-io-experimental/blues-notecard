@@ -22,6 +22,5 @@ COPY . ./
 ENV UDEV=1
 
 # main.py will run when container starts up on the device
-#CMD ["python","-u","examples/i2c-example.py"]
-#CMD ["python","-u","examples/rpi-example.py"]
+
 CMD ["python","-u","examples/gps.py"]

@@ -6,7 +6,6 @@ library on a Raspberry Pi device.
 import sys
 import os
 import time
-import random
 
 sys.path.insert(0, os.path.abspath(
                 os.path.join(os.path.dirname(__file__), '..')))
@@ -38,49 +37,18 @@ def NotecardExceptionInfo(exception):
     return "line " + s1 + ": " + s2 + ": " + ' '.join(map(str, exception.args))
 
 
-def transactionSync(card):
-    req = {"req":"hub.sync"}
-    callTransaction(card, req, "SYNC")
+def transactionTest(card):
+    """Submit a simple JSON-based request to the Notecard.
 
-def transactionSyncStatus(card):
-    req = {"req":"hub.sync.status"}
-    callTransaction(card, req, "SYNC.STATUS")
+    Args:
+        card (object): An instance of the Notecard class
 
-def transactionSend(card):
-    randNumber = random.randint(0, 11)
-    req = {"req":"note.add","body":{"temp": randNumber}}
-    callTransaction(card, req, "SEND")
+    """
+    req = {"req": "card.status"}
 
-
-def transactionSet(card):
-    req = {"req":"hub.set","product":"io.balena.marc:nbgl500"}
-    callTransaction(card, req, "SET")
-
-
-def transactionTime(card):
-    req = {"req": "card.time"}
-    callTransaction(card, req, "TIME")
-
-def transactionGPS(card):
-    req = {"req":"card.location"}
-    callTransaction(card, req, "GPS")
-
-
-def transactionTriangulate(card):
-    req = {"req": "card.triangulate", "mode": "wifi,cell", "on": True, "usb": True, "set": True}
-    callTransaction(card, req, "TRIANGULATE")
-
-
-
-def callTransaction(card, req, ope):
     try:
-        print(ope)
-        print(req)
         rsp = card.Transaction(req)
         print(rsp)
-
-        time.sleep(10)
-
     except Exception as exception:
         print("Transaction error: " + NotecardExceptionInfo(exception))
         time.sleep(5)
@@ -90,39 +58,29 @@ def main():
     """Connect to Notcard and run a transaction test."""
     print("Opening port...")
     try:
-        port = I2C("/dev/i2c-1")
+        if use_uart:
+            port = Serial("/dev/serial0", 9600)
+        else:
+            port = I2C("/dev/i2c-1")
     except Exception as exception:
         raise Exception("error opening port: "
                         + NotecardExceptionInfo(exception))
 
     print("Opening Notecard...")
     try:
-        card = notecard.OpenI2C(port, 0, 0)
+        if use_uart:
+            card = notecard.OpenSerial(port)
+        else:
+            card = notecard.OpenI2C(port, 0, 0)
     except Exception as exception:
         raise Exception("error opening notecard: "
                         + NotecardExceptionInfo(exception))
 
     # If success, do a transaction loop
     print("Performing Transactions...")
-    counter = 0
     while True:
         time.sleep(2)
-        print(counter)
-        if counter < 1:
-            transactionSet(card)
-            counter = 1
-        else:
-            transactionSync(card)
-            time.sleep(15)
-            transactionSend(card)
-            time.sleep(15)
-            transactionTime(card)
-            time.sleep(15)
-            transactionTriangulate(card)
-            time.sleep(15)
-            transactionGPS(card)
-            time.sleep(15)
-            transactionSyncStatus(card)
-            time.sleep(15)
+        transactionTest(card)
+
 
 main()

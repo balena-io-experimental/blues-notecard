@@ -47,6 +47,10 @@ def transactionSyncStatus(card):
     req = {"req":"hub.sync.status"}
     callTransaction(card, req, "SYNC.STATUS")
 
+def transactionRestore(card):
+    req = {"req": "card.restore", "delete": True}
+    callTransaction(card, req, "RESTORE")
+
 def transactionSend(card):
     randNumber = random.randint(0, 11)
     req = {"req":"note.add","body":{"temp": randNumber}}
@@ -54,7 +58,7 @@ def transactionSend(card):
 
 
 def transactionSet(card):
-    req = {"req":"hub.set","product":"io.balena.marc:nbgl500"}
+    req = {"req":"hub.set","product":"io.balena.marc:nbgl500", "mode":"periodic", "inbound": 720, "outbound": 15}
     callTransaction(card, req, "SET")
 
 
@@ -63,12 +67,12 @@ def transactionTime(card):
     callTransaction(card, req, "TIME")
 
 def transactionGPSActivation(card):
-    req = {"req": "card.location.mode", "mode": "periodic", "seconds": 10}
+    req = {"req": "card.location.mode", "mode": "continuous"}
     callTransaction(card, req, "GPS")
 
 def transactionGPS(card):
-    #req = {"req": "card.location"}
-    req = {"req":"card.location.track","start":true,"heartbeat":true,"hours":24}
+    req = {"req": "card.location"}
+    #req = {"req":"card.location.track","start":true,"heartbeat":true,"hours":24}
     callTransaction(card, req, "GPS")
 
 def sleepCM():
@@ -92,6 +96,14 @@ def callTransaction(card, req, ope):
         print("Transaction error: " + NotecardExceptionInfo(exception))
         time.sleep(5)
 
+def check_gps(rsp):
+    """ checks if gps module is active with location """
+    print(rsp)
+
+    if ("{gps-sats}" in rsp["status"] and "lat" in rsp):
+        return True
+    else:
+        return False
 
 def main():
     """Connect to Notcard and run a transaction test."""
@@ -112,22 +124,38 @@ def main():
     # If success, do a transaction loop
     print("Performing Transactions...")
     counter = 0
+
     while True:
-        time.sleep(2)
-        print(counter)
-        if counter < 1:
-            transactionSet(card)
-            counter = 1
-        else:
+        print("------- Starting the loop ---------")
+        
+        transactionRestore(card)
+        time.sleep(5)
 
-            transactionSync(card)
-            time.sleep(15)
-            transactionGPSActivation(card)
-            time.sleep(60)
-            transactionGPS(card)
-            time.sleep(15)
-            transactionSyncStatus(card)
-            time.sleep(15)
-            sleepCM()
+        transactionSet(card)
+        time.sleep(15)
+        
+        transactionGPSActivation(card)
+        print("card.location.mode continuous done")
+        is_gps_active = False
+        time.sleep(60)
 
+        while not is_gps_active:
+            """ if gps module is active, start tracking location """
+            req = {"req": "card.location"}
+            rsp = card.Transaction(req)
+            print("Send card.location")
+            print(rsp)
+
+            if check_gps(rsp):
+                is_gps_active = True
+                print("GPS ACTIVATED")
+                print(rsp["lat"])
+                print(rsp["lon"])
+            else:
+                print("GPS INACTIVE")
+                time.sleep(20)
+        
+    
+
+        
 main()
